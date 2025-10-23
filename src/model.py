@@ -1,0 +1,36 @@
+import torch
+import torch.nn as nn
+import timm
+from transformers import DistilBertModel
+
+class MultimodalPricePredictor(nn.Module):
+    def __init__(self, text_model_name='distilbert-base-uncased', image_model_name='efficientnet_b0', pretrained=True):
+        super().__init__()
+
+        self.text_model = DistilBertModel.from_pretrained(text_model_name)
+
+        self.image_model = timm.create_model(image_model_name, pretrained=pretrained, num_classes=0)
+
+        text_features_dim = self.text_model.config.dim
+        image_features_dim = self.image_model.num_features
+
+        combined_features_dim = text_features_dim + image_features_dim + 1
+
+        self.regressor = nn.Sequential(
+            nn.Linear(combined_features_dim, 512),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(512, 1)
+        )
+
+    def forward(self, input_ids, attention_mask, image, ipq):
+
+        text_output = self.text_model(input_ids=input_ids, attention_mask=attention_mask)
+        text_features = text_output.last_hidden_state[:, 0, :]  
+
+        image_features = self.image_model(image)
+
+        combined_features = torch.cat([text_features, image_features, ipq.unsqueeze(1)], dim=1)
+
+        price_prediction = self.regressor(combined_features)
+        return price_prediction.squeeze(1)

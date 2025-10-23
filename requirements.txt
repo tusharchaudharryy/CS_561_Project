@@ -1,0 +1,8 @@
+pandas
+torch
+torchvision
+transformers
+timm
+scikit-learn
+Pillow
+tqdm
