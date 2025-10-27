@@ -2,10 +2,6 @@
 *.joblib
 *.npz
 *.npy
-data/imaegs/
-features/
-models/
-notebooks/
 __pycache__/
 *.log
 .env
