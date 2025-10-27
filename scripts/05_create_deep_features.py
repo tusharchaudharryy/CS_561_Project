@@ -1,8 +1,6 @@
-# scripts/04_create_deep_features.py
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 import pandas as pd
 import numpy as np
 import torch
@@ -17,10 +15,6 @@ from src.model import MultimodalPricePredictor
 from src.utils import extract_ipq
 import src.config as config
 
-print("--- Extracting Deep Features ---")
-print("!!! This script requires pre-trained PyTorch models to exist.")
-print("!!! Ensure '05_train_main_model.py' (or similar) has been run to create .pth files.")
-
 DEVICE = config.DEVICE
 IMAGE_DIR = config.IMAGE_DIR
 FEATURE_DIR = config.FEATURE_DIR
@@ -28,21 +22,17 @@ MODEL_DIR = config.MODEL_DIR
 TRAIN_CSV = config.PROJECT_TRAIN_CSV
 TEST_CSV = config.PROJECT_TEST_CSV
 TEXT_MODEL_NAME = config.TEXT_MODEL_NAME
-# Use the *actual* model config used for training (e.g., efficientnet_b0)
+
 IMAGE_MODELS_ARCH = {
-    'efficientnet_b0': config.MODEL_SAVE_PATH # Assuming main model uses efficientnet_b0
-    # Add other trained model paths here if you train multiple architectures
-    # 'resnet50': os.path.join(MODEL_DIR, 'resnet50_model.pth')
+    'efficientnet_b0': config.MODEL_SAVE_PATH 
 }
 IMAGE_SIZE = config.IMAGE_SIZE
 MAX_TEXT_LENGTH = config.MAX_TEXT_LENGTH
-BATCH_SIZE = 64 # Can often use larger batch size for inference
+BATCH_SIZE = 64
 
 os.makedirs(FEATURE_DIR, exist_ok=True)
 
-# --- Dataset Definition (Copied from src/dataset.py for simplicity in this script) ---
 class FeatureDataset(torch.utils.data.Dataset):
-    # (Same as in previous extract_features.py example) ...
     def __init__(self, df, tokenizer, image_transform, image_dir):
         self.df = df
         self.tokenizer = tokenizer
@@ -71,10 +61,8 @@ class FeatureDataset(torch.utils.data.Dataset):
             'image': self.image_transform(image),
             'sample_id': str(row['sample_id'])
         }
-# --- End Dataset Definition ---
 
 def get_deep_features(model, dataloader):
-    # (Same as in previous extract_features.py example) ...
     model.eval()
     all_features = []
     with torch.no_grad():
@@ -89,8 +77,6 @@ def get_deep_features(model, dataloader):
             all_features.append(combined)
     return np.vstack(all_features)
 
-
-# --- Main Execution ---
 if __name__ == "__main__":
     try:
         train_df = pd.read_csv(TRAIN_CSV)
@@ -110,7 +96,6 @@ if __name__ == "__main__":
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=config.NUM_WORKERS)
     test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=config.NUM_WORKERS)
 
-    # Extract and save IPQ (can reuse from baseline or extract again)
     print("Extracting and saving IPQ features...")
     train_ipq = extract_ipq(train_df['catalog_content'])
     test_ipq = extract_ipq(test_df['catalog_content'])
@@ -124,10 +109,8 @@ if __name__ == "__main__":
             print(f"ERROR: Model file not found at {model_path}. Skipping.")
             continue
 
-        # Instantiate model based on the architecture name used during training
         model = MultimodalPricePredictor(image_model_name=model_arch, text_model_name=TEXT_MODEL_NAME).to(DEVICE)
         try:
-            # Load the state dict saved by the training script
             model.load_state_dict(torch.load(model_path, map_location=DEVICE))
         except RuntimeError as e:
              print(f"Error loading model state dict for {model_arch}: {e}")
@@ -142,4 +125,4 @@ if __name__ == "__main__":
         np.save(os.path.join(FEATURE_DIR, f'test_deep_features_{model_arch}.npy'), test_features)
         print(f"Test deep features for {model_arch} saved.")
 
-    print("\n--- Deep Feature Extraction Complete ---")
+    print("\n Deep Feature Extraction Complete ")

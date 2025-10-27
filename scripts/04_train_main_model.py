@@ -1,4 +1,3 @@
-# scripts/05_train_main_model.py
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -14,10 +13,10 @@ import time
 
 from src.dataset import MultimodalDataset, get_tokenizer, image_transform
 from src.model import MultimodalPricePredictor
-from src.utils import smape, mae, rmse, r_squared # Import all metrics
+from src.utils import smape, mae, rmse, r_squared
 import src.config as config
 
-print(f"--- Training Main Multimodal Model ---")
+print(f" Training Main Multimodal Model ")
 print(f"Using device: {config.DEVICE}")
 os.makedirs(config.MODEL_DIR, exist_ok=True)
 
@@ -33,7 +32,6 @@ train_indices, val_indices = train_test_split(
 print(f"Data split: {len(train_indices)} training samples, {len(val_indices)} validation samples")
 
 tokenizer = get_tokenizer()
-# Pass is_test_set=False for training/validation data
 full_dataset = MultimodalDataset(config.PROJECT_TRAIN_CSV, tokenizer, image_transform, is_test_set=False)
 
 train_dataset = Subset(full_dataset, train_indices)
@@ -80,22 +78,20 @@ for epoch in range(config.EPOCHS):
             attention_mask = batch['attention_mask'].to(config.DEVICE)
             image = batch['image'].to(config.DEVICE)
             ipq = batch['ipq'].to(config.DEVICE)
-            targets = batch['target'].to(config.DEVICE) # Log price
-            outputs = model(input_ids, attention_mask, image, ipq) # Log price predictions
+            targets = batch['target'].to(config.DEVICE)
+            outputs = model(input_ids, attention_mask, image, ipq)
             val_preds_log.extend(outputs.cpu().numpy())
             val_targets_log.extend(targets.cpu().numpy())
-            # Convert targets back to original price for SMAPE/MAE/RMSE
             val_prices_true.extend(np.expm1(targets.cpu().numpy()))
 
     val_preds_orig = np.expm1(np.array(val_preds_log))
     val_prices_true = np.array(val_prices_true)
 
-    # Calculate all validation metrics
     val_smape = smape(val_prices_true, val_preds_orig)
     val_mae = mae(val_prices_true, val_preds_orig)
     val_rmse = rmse(val_prices_true, val_preds_orig)
     val_r2 = r_squared(val_prices_true, val_preds_orig)
-    avg_val_loss = criterion(torch.tensor(val_preds_log), torch.tensor(val_targets_log)).item() # MSE on log scale
+    avg_val_loss = criterion(torch.tensor(val_preds_log), torch.tensor(val_targets_log)).item()
 
     epoch_duration = time.time() - epoch_start_time
     print(f"Epoch {epoch+1}/{config.EPOCHS} | Train Loss: {avg_train_loss:.4f} | Val SMAPE: {val_smape:.4f} | Val MAE: {val_mae:.2f} | Val RMSE: {val_rmse:.2f} | Val R2: {val_r2:.4f} | Time: {epoch_duration:.2f}s")
@@ -104,7 +100,7 @@ for epoch in range(config.EPOCHS):
         best_val_smape = val_smape
         epochs_no_improve = 0
         torch.save(model.state_dict(), config.MODEL_SAVE_PATH)
-        print(f"  ✨ Val SMAPE improved to {best_val_smape:.4f}. Model saved to {config.MODEL_SAVE_PATH}")
+        print(f"   Val SMAPE improved to {best_val_smape:.4f}. Model saved to {config.MODEL_SAVE_PATH}")
     else:
         epochs_no_improve += 1
         print(f"  Val SMAPE did not improve. Counter: {epochs_no_improve}/{config.PATIENCE}")
@@ -114,7 +110,7 @@ for epoch in range(config.EPOCHS):
         break
 
 total_training_time = time.time() - training_start_time
-print(f"\n--- Training Complete ---")
+print(f"\n Training Complete ")
 print(f"Best Validation SMAPE achieved: {best_val_smape:.4f}")
 print(f"Model saved to: {config.MODEL_SAVE_PATH}")
 print(f"Total Training Time: {total_training_time:.2f}s")

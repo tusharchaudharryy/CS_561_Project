@@ -17,10 +17,9 @@ from src.model import MultimodalPricePredictor
 from src.utils import smape, mae, rmse, r_squared
 import src.config as config
 
-print("--- Evaluating All Models on Project Test Set ---")
-os.makedirs(config.FEATURE_DIR, exist_ok=True) # Ensure features dir exists
+print(" Evaluating All Models on Project Test Set ")
+os.makedirs(config.FEATURE_DIR, exist_ok=True)
 
-# 1. Load Project Test Data
 try:
     test_df = pd.read_csv(config.PROJECT_TEST_CSV)
     y_test_true = test_df['price'].values
@@ -31,8 +30,7 @@ except FileNotFoundError:
 
 results = {}
 
-# --- Evaluate Baseline Model ---
-print("\n--- Evaluating Baseline LGBM Model ---")
+print("\n Evaluating Baseline LGBM Model")
 try:
     baseline_model = joblib.load(config.BASELINE_LGBM_MODEL_PATH)
     X_test_baseline = load_npz(config.BASELINE_FEATURES_TEST)
@@ -49,21 +47,17 @@ try:
         'R2': r_squared(y_test_true, baseline_preds),
     }
     print("Baseline LGBM evaluation complete.")
-
 except FileNotFoundError:
     print("Baseline model or features not found. Skipping baseline evaluation.")
 except Exception as e:
     print(f"Error during baseline evaluation: {e}")
 
-# --- Evaluate Main Multimodal Model ---
-print("\n--- Evaluating Main Multimodal Model (PyTorch) ---")
+print("\n Evaluating Main Multimodal Model (PyTorch) ")
 try:
     tokenizer = get_tokenizer()
-    # Pass is_test_set=False because project_test HAS prices for evaluation
     test_dataset = MultimodalDataset(config.PROJECT_TEST_CSV, tokenizer, image_transform, is_test_set=False)
     test_loader = DataLoader(test_dataset, batch_size=config.BATCH_SIZE * 2, shuffle=False, num_workers=config.NUM_WORKERS)
 
-    # Instantiate model with the architecture used during training
     main_model = MultimodalPricePredictor(image_model_name=config.IMAGE_MODEL_NAME).to(config.DEVICE)
     main_model.load_state_dict(torch.load(config.MODEL_SAVE_PATH, map_location=config.DEVICE))
     main_model.eval()
@@ -89,16 +83,12 @@ try:
         'R2': r_squared(y_test_true, main_preds),
     }
     print("Main multimodal model evaluation complete.")
-
 except FileNotFoundError:
     print(f"Main multimodal model not found at {config.MODEL_SAVE_PATH}. Skipping evaluation.")
 except Exception as e:
     print(f"Error during main model evaluation: {e}")
 
-
-# --- (Optional) Evaluate Hybrid K-Fold LGBM Model ---
-# This part assumes you run script 05_train_hybrid_model.py which saves K-Fold models
-print("\n--- Evaluating Hybrid K-Fold LGBM Model ---")
+print("\n Evaluating Hybrid K-Fold LGBM Model ")
 try:
     print("Loading deep test features...")
     test_ipq = np.load(os.path.join(config.FEATURE_DIR, 'test_ipq.npy'))
@@ -107,7 +97,7 @@ try:
     X_test_hybrid = hstack(test_deep_features + [test_ipq]).tocsr()
     print(f"Loaded hybrid features shape: {X_test_hybrid.shape}")
 
-    hybrid_preds_sum = np.zeros(len(X_test_hybrid.toarray())) # Convert to dense for prediction if needed, adjust based on RAM
+    hybrid_preds_sum = np.zeros(len(X_test_hybrid.toarray()))
     models_loaded = 0
     for fold in range(config.HYBRID_N_SPLITS):
         model_filename = os.path.join(config.MODEL_DIR, f'hybrid_lgbm_model_fold_{fold+1}.joblib')
@@ -132,21 +122,15 @@ try:
         }
         print("Hybrid K-Fold LGBM evaluation complete.")
     else:
-         print("No hybrid K-Fold models loaded. Skipping evaluation.")
-
+        print("No hybrid K-Fold models loaded. Skipping evaluation.")
 except FileNotFoundError:
     print("Deep features or hybrid models not found. Skipping hybrid evaluation.")
-    print("Ensure '04_create_deep_features.py' and '05_train_hybrid_model.py' (or equivalent K-Fold script) were run.")
 except Exception as e:
     print(f"Error during hybrid model evaluation: {e}")
 
-
-# --- Display Results ---
-print("\n\n--- 📊 Final Evaluation Results ---")
-results_df = pd.DataFrame(results).T # Transpose for better readability
+print("\n\nFinal Evaluation Results ")
+results_df = pd.DataFrame(results).T
 print(results_df.to_string())
-print("----------------------------------")
 
-# Save results to a file
 results_df.to_csv(os.path.join('reports', 'final_evaluation_metrics.csv'))
 print("\nResults saved to reports/final_evaluation_metrics.csv")

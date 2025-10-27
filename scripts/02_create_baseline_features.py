@@ -1,4 +1,3 @@
-# scripts/02_create_baseline_features.py
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -11,7 +10,7 @@ import src.config as config
 
 os.makedirs(config.FEATURE_DIR, exist_ok=True)
 
-print("--- Creating Baseline Features (TF-IDF + IPQ) ---")
+print(" Creating Baseline Features (TF-IDF + IPQ) ")
 
 try:
     train_df = pd.read_csv(config.PROJECT_TRAIN_CSV)
@@ -23,14 +22,14 @@ except FileNotFoundError as e:
 print(f"Train shape: {train_df.shape}, Test shape: {test_df.shape}")
 full_df = pd.concat([train_df.drop(columns=['price']), test_df], axis=0, ignore_index=True)
 
-print("Calculating TF-IDF features...")
+print("Calculating TF-IDF features")
 tfidf = TfidfVectorizer(ngram_range=(1, 2), max_features=50000, stop_words='english')
 text_features = tfidf.fit_transform(full_df['catalog_content'].fillna(''))
 
-print("Extracting IPQ features...")
+print("Extracting IPQ features")
 ipq_features = extract_ipq(full_df['catalog_content'])
 
-print("Combining features...")
+print("Combining features")
 X_full = hstack([text_features, ipq_features]).tocsr()
 
 X_train_baseline = X_full[:len(train_df)]
@@ -44,4 +43,4 @@ save_npz(config.BASELINE_FEATURES_TEST, X_test_baseline)
 
 print(f"Baseline training features saved to: {config.BASELINE_FEATURES_TRAIN}")
 print(f"Baseline test features saved to: {config.BASELINE_FEATURES_TEST}")
-print("--- Baseline Feature Creation Complete ---")
+print(" Baseline Feature Creation Complete ")
