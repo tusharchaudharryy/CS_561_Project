@@ -20,10 +20,10 @@ class MultimodalPricePredictor(nn.Module):
         combined_features_dim = text_features_dim + image_features_dim + 1
 
         self.regressor = nn.Sequential(
-            nn.BatchNorm1d(combined_features_dim), # Added BatchNorm
+            nn.BatchNorm1d(combined_features_dim),
             nn.Linear(combined_features_dim, 512),
             nn.ReLU(),
-            nn.Dropout(0.4), # Increased dropout slightly
+            nn.Dropout(0.4), 
             nn.Linear(512, 1)
         )
 
