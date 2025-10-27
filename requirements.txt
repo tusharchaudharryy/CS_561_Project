@@ -1,8 +1,11 @@
 pandas
+scikit-learn
 torch
 torchvision
 transformers
 timm
-scikit-learn
+lightgbm
 Pillow
 tqdm
+optuna
+joblib
