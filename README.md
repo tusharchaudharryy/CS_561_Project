@@ -1,3 +1,3 @@
 # smart-pricing-project
 
-Project description goes here.
+Multimodal Product Price Prediction Project.

@@ -1,0 +1,12 @@
+*.pth
+*.joblib
+*.npz
+*.npy
+data/
+features/
+models/
+notebooks/
+__pycache__/
+*.log
+.env
+*.csv

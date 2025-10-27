@@ -7,5 +7,4 @@ timm
 lightgbm
 Pillow
 tqdm
-optuna
 joblib
