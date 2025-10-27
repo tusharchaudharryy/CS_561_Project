@@ -7,7 +7,6 @@ import joblib
 import os
 from src.utils import smape
 
-# Configuration
 DATA_DIR = './data/'
 FEATURE_DIR = './features/'
 MODEL_DIR = './models/'
@@ -17,9 +16,8 @@ MODEL_PATH = os.path.join(MODEL_DIR, 'baseline_lgbm_model.joblib')
 
 os.makedirs(MODEL_DIR, exist_ok=True)
 
-print("--- Training Baseline LightGBM Model ---")
+print(" Training Baseline LightGBM Model ")
 
-# Load features and target
 try:
     X = load_npz(TRAIN_FEATURES)
     train_df = pd.read_csv(TRAIN_CSV)
@@ -31,12 +29,10 @@ except FileNotFoundError as e:
 
 print(f"Loaded features shape: {X.shape}")
 
-# Split for validation within this script
 X_train, X_val, y_train, y_val, _, y_val_true_orig = train_test_split(
-    X, y, y_true_orig, test_size=0.15, random_state=42 # Use 15% for validation here
+    X, y, y_true_orig, test_size=0.15, random_state=42
 )
 
-# LightGBM Parameters (start with reasonable defaults)
 params = {
     'objective': 'regression_l1',
     'metric': 'mae',
@@ -51,20 +47,20 @@ params = {
     'seed': 42,
 }
 
-print("Training model...")
+print("Training model")
 model = lgb.LGBMRegressor(**params)
-model.fit(X_train, y_train,
-          eval_set=[(X_val, y_val)],
-          eval_metric='mae',
-          callbacks=[lgb.early_stopping(100, verbose=True)])
+model.fit(
+    X_train, y_train,
+    eval_set=[(X_val, y_val)],
+    eval_metric='mae',
+    callbacks=[lgb.early_stopping(100, verbose=True)]
+)
 
-# Evaluate on validation set
 val_preds_log = model.predict(X_val)
 val_preds = np.expm1(val_preds_log)
 validation_smape = smape(y_val_true_orig, val_preds)
-print(f"\n--- Baseline Model Validation SMAPE: {validation_smape:.4f} ---")
+print(f"\n Baseline Model Validation SMAPE: {validation_smape:.4f} ")
 
-# Save the trained model
 joblib.dump(model, MODEL_PATH)
 print(f"Baseline model saved to: {MODEL_PATH}")
-print("--- Baseline Model Training Complete ---")
+print(" Baseline Model Training Complete ")

@@ -6,15 +6,11 @@ from transformers import DistilBertTokenizer
 from torchvision import transforms
 from tqdm import tqdm
 import os
-import re
 from PIL import Image
-
-# Import from project structure
 from src.model import MultimodalPricePredictor
 from src.utils import extract_ipq
 import src.config as config
 
-# Configuration from src/config.py
 DEVICE = config.DEVICE
 IMAGE_DIR = config.IMAGE_DIR
 FEATURE_DIR = config.FEATURE_DIR
@@ -29,7 +25,6 @@ BATCH_SIZE = config.FEATURE_EXTRACTION_BATCH_SIZE
 
 os.makedirs(FEATURE_DIR, exist_ok=True)
 
-# Custom Dataset for feature extraction
 class FeatureDataset(torch.utils.data.Dataset):
     def __init__(self, df, tokenizer, image_transform, image_dir):
         self.df = df
@@ -49,16 +44,14 @@ class FeatureDataset(torch.utils.data.Dataset):
             image = Image.open(image_path).convert('RGB')
         except FileNotFoundError:
             image = Image.new('RGB', (IMAGE_SIZE, IMAGE_SIZE), (255, 255, 255))
-
         return {
             'input_ids': inputs['input_ids'].squeeze(0),
             'attention_mask': inputs['attention_mask'].squeeze(0),
             'image': self.image_transform(image),
-            'sample_id': row['sample_id'] # Keep ID if needed later, though not used in extraction here
+            'sample_id': row['sample_id']
         }
 
 def get_deep_features(model, dataloader):
-    """Extracts combined text and image features before the regressor head."""
     model.eval()
     all_features = []
     with torch.no_grad():
@@ -66,18 +59,15 @@ def get_deep_features(model, dataloader):
             input_ids = batch['input_ids'].to(DEVICE)
             attention_mask = batch['attention_mask'].to(DEVICE)
             image = batch['image'].to(DEVICE)
-
             text_output = model.text_model(input_ids=input_ids, attention_mask=attention_mask)
             text_features = text_output.last_hidden_state[:, 0, :]
             image_features = model.image_model(image)
-
             combined = torch.cat([text_features, image_features], dim=1).cpu().numpy()
             all_features.append(combined)
     return np.vstack(all_features)
 
-# --- Main Execution ---
 if __name__ == "__main__":
-    print("--- Extracting Deep Features ---")
+    print(" Extracting Deep Features ")
     try:
         train_df = pd.read_csv(TRAIN_CSV)
         test_df = pd.read_csv(TEST_CSV)
@@ -97,7 +87,6 @@ if __name__ == "__main__":
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
     test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
 
-    # Extract and save IPQ (do this once)
     print("Extracting and saving IPQ features...")
     train_ipq = extract_ipq(train_df['catalog_content'])
     test_ipq = extract_ipq(test_df['catalog_content'])
@@ -105,31 +94,23 @@ if __name__ == "__main__":
     np.save(os.path.join(FEATURE_DIR, 'test_ipq.npy'), test_ipq)
     print("IPQ features saved.")
 
-    # Extract deep features for each specified model
     for model_arch, model_filename in IMAGE_MODELS.items():
         print(f"\nProcessing features using {model_arch}")
         model_path = os.path.join(MODEL_DIR, model_filename)
-
         if not os.path.exists(model_path):
             print(f"Warning: Model file not found at {model_path}. Skipping feature extraction for {model_arch}.")
             continue
-
         model = MultimodalPricePredictor(image_model_name=model_arch, text_model_name=TEXT_MODEL_NAME).to(DEVICE)
         try:
             model.load_state_dict(torch.load(model_path, map_location=DEVICE))
         except RuntimeError as e:
-             print(f"Error loading model state dict for {model_arch}: {e}")
-             print("Ensure the model architecture in src/model.py matches the saved checkpoint.")
-             continue
-
-
-        # Extract and save features
+            print(f"Error loading model state dict for {model_arch}: {e}")
+            print("Ensure the model architecture in src/model.py matches the saved checkpoint.")
+            continue
         train_features = get_deep_features(model, train_loader)
         np.save(os.path.join(FEATURE_DIR, f'train_deep_features_{model_arch}.npy'), train_features)
         print(f"Train deep features for {model_arch} saved.")
-
         test_features = get_deep_features(model, test_loader)
         np.save(os.path.join(FEATURE_DIR, f'test_deep_features_{model_arch}.npy'), test_features)
         print(f"Test deep features for {model_arch} saved.")
-
-    print("\n--- Deep Feature Extraction Complete ---")
+    print("\n Deep Feature Extraction Complete ")
