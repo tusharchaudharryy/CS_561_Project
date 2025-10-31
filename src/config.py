@@ -12,7 +12,7 @@ PROJECT_TRAIN_CSV = './data/project_train.csv'
 PROJECT_TEST_CSV = './data/project_test.csv'
 
 TEXT_MODEL_NAME = 'distilbert-base-uncased'
-IMAGE_MODEL_NAME = 'efficientnet_b0'
+IMAGE_MODEL_NAME = 'resnet50'
 IMAGE_SIZE = 224
 MAX_TEXT_LENGTH = 256
 
@@ -21,7 +21,7 @@ BATCH_SIZE = 32
 LEARNING_RATE = 5e-6
 EPOCHS = 15
 PATIENCE = 3
-MODEL_SAVE_PATH = f'{MODEL_DIR}/main_multimodal_model.pth'
+MODEL_SAVE_PATH = f'{MODEL_DIR}/resnet50_feature_extractor.pth'
 
 BASELINE_LGBM_MODEL_PATH = f'{MODEL_DIR}/baseline_lgbm_model.joblib'
 BASELINE_FEATURES_TRAIN = f'{FEATURE_DIR}/train_baseline_features.npz'
